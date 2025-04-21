@@ -17,8 +17,10 @@ interpret (SELECT x) = do
 -- DO -- 
 interpret (DO task) = do
     putStrLn "Running DO"
-    interpret task
-
+    column <- interpret task
+    writeFile "output.csv" column
+    putStrLn "Wrote result to output.csv"
+    return column
 
 
 -- GET --
@@ -29,7 +31,7 @@ interpret (GET col csvExpr) = do
     let rows = map (splitOn ",") (lines contents)
     let colIndex = getColumnIndex col
     let colValues = [ row !! colIndex | row <- rows, length row > colIndex ]
-    putStrLn ("Successfully got values: " ++ show colValues)
+    putStrLn ("Successfully got values: " ++ unlines colValues)
     return $ unlines colValues
 
 interpret (FILENAME name) = return name
@@ -42,9 +44,11 @@ interpret (STR s) =
 -- Left Most Inner Most Associativity 
 interpret (ANDSELECT x y) = do
     putStrLn "Selecting the following items together:"
-    interpret x
-    interpret y
-    return "Done selecting."
+    columns <- interpret x
+    nextColumn <- interpret y
+    let merged = mergeColumns columns nextColumn
+    putStrLn $ "New merged:\n" ++ merged
+    return merged
 
 -- THENTASK --
 -- Left Most Inner Most Associativity 
@@ -57,9 +61,11 @@ interpret (THENTASK tasklist task) = do
 -- PRODUCT --
 interpret (PRODUCT x y) = do
     putStrLn "Running PRODUCT Task:"
-    interpret x
-    interpret y
-    return "Combing the two tables together"
+    table1 <- interpret x
+    table2 <- interpret y
+    let product = cartesianProduct table1 table2
+    putStrLn $ "New Product:\n" ++ product
+    return product
 
 -- DROP --
 interpret (DROP col file) =
@@ -169,10 +175,22 @@ interpret (RESULTOF task) = do
 
 
 
-
-
 interpret expr = return $ "Unimplemented: " ++ show expr
 
 getColumnIndex :: Exp2 -> Int
 getColumnIndex (COLUMN i) = i-1
 getColumnIndex _ = error "Expected a COLUMN expression with an index."
+
+mergeColumns :: String -> String -> String
+mergeColumns colA colB =
+    let rowsA = lines colA
+        rowsB = lines colB
+        paired = zip rowsA rowsB
+    in unlines [a ++ "," ++ b | (a, b) <- paired]
+
+cartesianProduct :: String -> String -> String
+cartesianProduct tableA tableB =
+    let rowsA = lines tableA
+        rowsB = lines tableB
+        result = [a ++ "," ++ b | a <- rowsA, b <- rowsB]
+    in unlines result
