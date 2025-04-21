@@ -10,8 +10,8 @@ interpret :: Exp2 -> IO String
 interpret (SELECT x) = do
     putStrLn "Running SELECT"
     column <- interpret x
-    writeFile "output.txt" column
-    putStrLn "Wrote result to output.txt"
+    writeFile "output.csv" column
+    putStrLn "Wrote result to output.csv"
     return column
 
 -- DO -- 
