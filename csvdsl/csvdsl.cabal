@@ -19,9 +19,11 @@ executable csvdsl
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 0.2 && < 8.0
                         , alex
                         , happy
+                        , array
+                      
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
@@ -31,3 +33,4 @@ executable csvdsl
                        -Wmissing-home-modules
                        -Wpartial-fields
                        -Wredundant-constraints
+
