@@ -3,6 +3,7 @@ module Interpreter where
 import Grammar
 
 import Data.List.Split (splitOn)
+import Data.ByteString (readFile)
 
 interpret :: Exp2 -> IO String
 
@@ -68,8 +69,15 @@ interpret (PRODUCT x y) = do
     return product
 
 -- DROP --
-interpret (DROP col file) =
+interpret (DROP col file) = do 
     return $ "Running DROP Task: Dropping " ++ show col ++ " in " ++ show file
+    content <- readFile name
+    let droppedLines = map (dropColumn index) (lines contents)
+    dropColumn index name
+    return $ intercalate "\n" droppedLines
+    where 
+        index = getColumnIndex
+        name = getFileName
 
 -- PERMUTE -- 
 interpret (PERMUTE x y) = do 
@@ -181,6 +189,10 @@ getColumnIndex :: Exp2 -> Int
 getColumnIndex (COLUMN i) = i-1
 getColumnIndex _ = error "Expected a COLUMN expression with an index."
 
+getFileName :: Exp2 -> String
+getFileName (File name) = name
+getFileName _ = error "Expected a FILE expression with a valid filename."
+
 mergeColumns :: String -> String -> String
 mergeColumns colA colB =
     let rowsA = lines colA
@@ -194,3 +206,8 @@ cartesianProduct tableA tableB =
         rowsB = lines tableB
         result = [a ++ "," ++ b | a <- rowsA, b <- rowsB]
     in unlines result
+
+dropColumn :: Int -> String -> String 
+dropColumn index line = 
+    let columns = splitOn "," line
+    in intercalate "," (take n columns ++ drop (n+1) columns)
