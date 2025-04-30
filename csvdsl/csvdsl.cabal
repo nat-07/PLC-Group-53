@@ -20,9 +20,8 @@ executable csvdsl
   main-is:             Main.hs
   default-language:    Haskell2010
   build-depends:       base >= 0.2 && < 8.0
-                        , alex
-                        , happy
                         , array
+                        , split >=0.2.3.4
                       
   ghc-options:         -Wall
                        -Wcompat

@@ -5,6 +5,9 @@ import Grammar
 import Data.List.Split (splitOn)
 import Prelude 
 import Data.List (intercalate)
+import GHC.IO.Exception (IOException(ioe_filename))
+import Prelude (putStrLn)
+import Text.ParserCombinators.ReadP (string)
 
 
 interpret :: Exp2 -> IO String
@@ -90,11 +93,14 @@ interpret (PERMUTE x y) = do
     return "Permutation finished"
 
 -- COPY a string to a file --
-interpret (COPY file string) = do 
-    return "Running COPY Task:"
-    interpret file
-    interpret string
-    return "Copy finished"
+---interpret (COPY file string) = do 
+    ---return "Running COPY Task:"
+   --- filename <- interpret file 
+    --contents <- Prelude.readFile filename
+   -- let rows = lines contents 
+    ---copiedRows <- copyString rows string []
+    ---putStrLn "Copy finished"
+    ---return copiedRows
 
 -- COPYIN a string to a file of a speciifc column  --
 interpret (COPYIN col file string) = do 
@@ -214,3 +220,9 @@ dropColumn :: Int -> String -> String
 dropColumn index line = 
     let columns = splitOn "," line
     in intercalate "," (take index columns ++ drop (index+1) columns)
+
+
+copyString :: [String] -> String -> [String] -> [String]
+copyString (r:rs) string copiedRows = 
+    copyString rs string (copiedRows ++ [r ++ string ++ r])
+copyString (r:[]) string copiedRows = copiedRows ++ [r ++ string ++ r]
