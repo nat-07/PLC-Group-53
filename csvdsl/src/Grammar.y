@@ -89,7 +89,7 @@ product : PRODUCT '(' selectList ')' TIMES '(' selectList ')' { PRODUCT $3 $7 }
 
 drop : DROP columnIndex IN csv { DROP $2 $4 }
 
-permutation : PERMUTE '(' selectList ')' IN csv { PERMUTE $3 $6 }
+permutation : PERMUTE csv { PERMUTE $2 }
 
 copy : COPY csv WITH string { COPY $2 $4 }
      | COPY columnIndex WITH string IN csv { COPYIN $2 $4 $6 }
@@ -139,7 +139,7 @@ data Exp2 = SELECT Exp2
           | DOWHERE Exp2 Exp2 
           | PRODUCT Exp2 Exp2 
           | DROP Exp2 Exp2
-          | PERMUTE Exp2 Exp2 
+          | PERMUTE Exp2 
           | COPY Exp2 Exp2
           | COPYIN Exp2 Exp2 Exp2 
           | LEFTMERGE Exp2 Exp2 Exp2

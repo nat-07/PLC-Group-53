@@ -8,6 +8,7 @@ import Data.List (intercalate)
 import GHC.IO.Exception (IOException(ioe_filename))
 import Prelude (putStrLn)
 import Text.ParserCombinators.ReadP (string)
+import Data.Bits (Bits(xor))
 
 
 interpret :: Exp2 -> IO String
@@ -86,15 +87,18 @@ interpret (DROP col file) = do
     return result
 
 -- PERMUTE -- 
-interpret (PERMUTE x y) = do 
-    return "Running PERMUTE Task:"
-    interpret x
-    interpret y
-    return "Permutation finished"
+interpret (PERMUTE x) = do 
+    putStrLn "Running PERMUTE Task:"
+    filename <- interpret x
+    contents <- Prelude.readFile filename 
+    let rows = lines contents 
+    sorted <- sort rows 
+    return sorted  
+    putStrLn "Permutation finished"
 
 -- COPY a string to a file --
 interpret (COPY file string) = do 
-    return "Running COPY Task:"
+    putStrLn "Running COPY Task:"
     filename <- interpret file 
     contents <- Prelude.readFile filename
     let rows = lines contents 
