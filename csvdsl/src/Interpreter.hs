@@ -86,10 +86,9 @@ interpret (DROP col file) = do
     return result
 
 -- PERMUTE -- 
-interpret (PERMUTE x y) = do 
+interpret (PERMUTE x) = do 
     return "Running PERMUTE Task:"
     interpret x
-    interpret y
     return "Permutation finished"
 
 -- COPY a string to a file --
