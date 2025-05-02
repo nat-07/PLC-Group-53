@@ -47,7 +47,8 @@ tokens :- -- Delimiter begins the rules (the name is irrelevant)
   "EMPTY"              { \_ -> TokenEmpty}
   "RESULT"          { \_ -> TokenResult }
   "ON"              { \_ -> TokenOn }
-
+  "PRINT"           { \_ -> TokenPrint}
+  \;                { \_ -> TokenSemiColon}
   "!="             { \_ -> TokenNeq }
   \=               { \s -> TokenEq }
   \(               { \s -> TokenLParen }
@@ -97,6 +98,8 @@ data Token
   | TokenVar String
   | TokenInt Int
   | TokenComma
+  | TokenSemiColon
+  | TokenPrint
   | TokenColumnIndex Int
   | TokenFileName String
   | TokenString String

@@ -36,11 +36,13 @@ import Tokens
     ON { TokenOn }
     FILENAME { TokenFileName $$ }
     RESULT { TokenResult }
+    PRINT {TokenPrint}
     int { TokenInt $$ } 
     var { TokenVar $$ } 
     '=' { TokenEq } 
     '(' { TokenLParen } 
     ')' { TokenRParen }
+    ';' {TokenSemiColon}
 
 %nonassoc SELECT WHERE FROM DO 
 %right IN
@@ -54,10 +56,17 @@ import Tokens
 
 %%
 
-Query : SELECT '(' selectList ')' { SELECT $3 }
-      | SELECT '(' selectList ')' WHERE '(' condition ')' { SELECTWHERE $3 $7 }
-      | DO tasks { DO $2 }
-      | DO tasks WHERE '(' condition ')' { DOWHERE $2 $5 }
+Queries : query ';' queriesRest { foldl ANDQUERY $1 $3}
+        
+
+queriesRest : query ';' queriesRest {$1 : $3}
+            |                         { [] }
+
+query : SELECT '(' selectList ')' TO filename { SELECT $3 $6} 
+      | SELECT '(' selectList ')' WHERE '(' condition ')' TO filename { SELECTWHERE $3 $7 $10 }
+      | DO task TO filename { DO $2 $4 }
+      | DO task WHERE '(' condition ')' TO filename { DOWHERE $2 $5 $8 }
+      | PRINT filename {PRINT $2}
 
 condition : selectItem '=' string { CONDITIONEQSTRING $1 $3 }
           | selectItem '!=' string { CONDITIONNEQSTRING $1 $3 }
@@ -74,10 +83,6 @@ selectListRest : ',' selectItem selectListRest { $2 : $3 }
                |                 { [] }
 
 selectItem : GET columnIndex OF csv { GET $2 $4 }
-
-
-tasks : task { $1 }
-      | task THEN tasks { THENTASK $1 $3 }
 
 task : product { $1 }
      | permutation { $1 }
@@ -99,7 +104,6 @@ leftMerge : LEFT MERGE csv TO csv ON columnIndex { LEFTMERGEON $3 $5 $7 }
           | LEFT MERGE '(' selectList ')' TO '(' selectList ')' ON columnIndex { LEFTMERGE $4 $8 $11 }
 
 csv : filename { $1 }
-    | RESULT OF '(' tasks ')' { RESULTOF $4 }
 
 columnIndex : COLUMN int { COLUMN $2 }
 
@@ -122,8 +126,8 @@ data Exp = Let String Exp Exp
          | Expon Exp Exp
          deriving Show 
 
-data Exp2 = SELECT Exp2 
-          | SELECTWHERE Exp2 Exp2 
+data Exp2 = SELECT Exp2 Exp2
+          | SELECTWHERE Exp2 Exp2 Exp2
           | CONDITIONEQSTRING Exp2 Exp2
           | CONDITIONNEQSTRING Exp2 Exp2
           | CONDITIONNEQITEM Exp2 Exp2
@@ -134,9 +138,9 @@ data Exp2 = SELECT Exp2
           | THENTASK Exp2 Exp2
           | AND Exp2 Exp2
           | OR Exp2 Exp2
-          | DO Exp2
+          | DO Exp2 Exp2
           | GET Exp2 Exp2
-          | DOWHERE Exp2 Exp2 
+          | DOWHERE Exp2 Exp2 Exp2
           | PRODUCT Exp2 Exp2 
           | DROP Exp2 Exp2
           | PERMUTE Exp2 
@@ -150,5 +154,7 @@ data Exp2 = SELECT Exp2
           | COLUMN Int 
           | STR String 
           | NAME String 
+          | PRINT Exp2
+          | ANDQUERY Exp2 Exp2
           deriving Show
 } 

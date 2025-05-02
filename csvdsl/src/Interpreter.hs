@@ -8,23 +8,35 @@ import Data.List (intercalate)
 import GHC.IO.Exception (IOException(ioe_filename))
 import Prelude (putStrLn)
 import Text.ParserCombinators.ReadP (string)
+import qualified Data.Map.Strict as Map
+
 
 
 interpret :: Exp2 -> IO String
 
+
+-- ANDQUERY --
+-- Left Most Inner Most Associativity 
+interpret (ANDQUERY x y) = do
+    putStrLn ("Querying " ++ show x)
+    interpret x
+    interpret y
+
 -- SELECT -- 
-interpret (SELECT x) = do
+interpret (SELECT x filename) = do
     putStrLn "Running SELECT"
     column <- interpret x
-    writeFile "output.csv" column
+    file <- interpret filename
+    writeFile (show file ++ ".csv") column
     putStrLn "Wrote result to output.csv"
     return column
 
 -- DO -- 
-interpret (DO task) = do
+interpret (DO task filename) = do
     putStrLn "Running DO"
     column <- interpret task
-    writeFile "output.csv" column
+    file <- interpret filename
+    writeFile (show file ++ ".csv") column
     putStrLn "Wrote result to output.csv"
     return column
 
@@ -111,36 +123,35 @@ interpret (COPYIN col file string) = do
 
 -- COPYIN a string to a file of a speciifc column  --
 interpret (LEFTMERGEON file1 file2 col) = do 
-    return "Running LEFT MERGE Task:"
-    interpret file1
-    interpret file2
-    interpret col
-    return "LEFT MERGE finished"
+    let keyIndex = getColumnIndex col
+    leftMerge (interpret file1) (interpret file2) keyIndex
 
 -- LEFT MERGE two files
 interpret (LEFTMERGECSV file1 file2) = do
-    return "Running LEFT MERGE Task:"
-    interpret file1
-    interpret file2
-    return "LEFT MERGE finished"
+    leftMerge (interpret file1) (interpret file2) 0
 
 -- LEFT MERGE two files of a specific column --
 interpret (LEFTMERGE file1 file2 col) = do
-    return "Running LEFT MERGE Task:"
-    interpret file1
-    interpret file2
-    interpret col
-    return "LEFT MERGE finished"
+    putStrLn "Running LEFT MERGE Task (LeftMerge):"
+
+    leftContents <- interpret file1
+    rightContents <- interpret file2
+
+    let keyIndex = getColumnIndex col
+        result = leftMergeFill keyIndex leftContents rightContents
+    
+    putStrLn "Left merge finished"
+    return result
 
 -- Conditions for tasks --
-interpret (DOWHERE tasks condition) = do
+interpret (DOWHERE tasks condition filename) = do
     interpret tasks
     return "with Condition:"
     interpret condition
     return "Conditions applied"
 
 -- Conditions for Select statements --
-interpret (SELECTWHERE selects condition) = do
+interpret (SELECTWHERE selects condition filename) = do
     interpret selects
     return "with Condition:"
     interpret condition
@@ -219,9 +230,54 @@ dropColumn :: Int -> String -> String
 dropColumn index line = 
     let columns = splitOn "," line
     in intercalate "," (take index columns ++ drop (index+1) columns)
+    
+leftMerge :: IO String -> IO String -> Int -> IO String
+leftMerge file1 file2 keyIndex = do
+    putStrLn $ "Running LEFTMERGE on column " ++ show (keyIndex+1)
+
+    file1Name <- file1
+    file2Name <- file2
+
+    leftContents <- readFile file1Name
+    rightContents <- readFile file2Name
+
+    putStrLn ""
+    putStrLn "left contents: "
+    putStrLn leftContents
+
+    putStrLn ""
+    putStrLn "right contents: "
+    putStrLn rightContents
+    putStrLn ""
+
+    let result = leftMergeFill keyIndex leftContents rightContents
+    putStrLn "Left merge finished"
+    return result
 
 
-copyString :: [String] -> String -> [String] -> [String]
-copyString (r:rs) string copiedRows = 
-    copyString rs string (copiedRows ++ [r ++ string ++ r])
+leftMergeFill :: Int -> String -> String -> String
+leftMergeFill keyIndex leftStr rightStr = 
+    let leftRows = lines leftStr
+        rightRows = lines rightStr
+        leftColumns = map (splitOn ",") leftRows
+        rightColumns = map (splitOn ",") rightRows
+
+        mapRight = Map.fromListWith (++) [(getKey row keyIndex, [row]) | row <- rightColumns, length row > keyIndex]
+        results = concatMap (\row -> mergeWithRight mapRight row keyIndex) leftColumns
+
+    in unlines $ map (intercalate ",") results
+
+mergeWithRight :: Map.Map String [[String]] -> [String] -> Int -> [[String]]
+mergeWithRight rightMap leftRow keyIndex = 
+    let key = getKey leftRow keyIndex
+    in case Map.lookup key rightMap of
+        Nothing -> []
+        Just rightRows -> [zipWith fillEmpty leftRow rightRow | rightRow <- rightRows]
+
+getKey :: [String] -> Int -> String
+getKey row i = if i < length row then row !! i else ""
+
+fillEmpty :: String -> String -> String
+fillEmpty p q = if null p then q else p
+
 copyString (r:[]) string copiedRows = copiedRows ++ [r ++ string ++ r]

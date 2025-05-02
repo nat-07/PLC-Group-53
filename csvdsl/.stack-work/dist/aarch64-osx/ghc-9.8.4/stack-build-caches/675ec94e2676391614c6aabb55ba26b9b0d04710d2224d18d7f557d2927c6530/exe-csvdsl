@@ -9,18 +9,18 @@
 /Users/natashaudani/.stack/programs/aarch64-osx/ghc-9.8.4/lib/ghc-9.8.4/lib/aarch64-osx-ghc-9.8.4/rts-1.0.2/include/ghcversion.h:
   hash: 95162794a3bf5e6167631fdd41a509846597231d523d0f21a76713b1f801373c
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/dist/aarch64-osx/ghc-9.8.4/build/csvdsl/autogen/cabal_macros.h:
-  hash: ed049f29bbe6cc5a3bf97171e25be7e671a19b58aceb3b21ab264b4da186e575
+  hash: fac6604ca01413352c6688ddec3b3e64373976e0c89691d6721dc451be4f019b
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/CHANGELOG.md:
   hash: 1c5cccc04d5c3082da2563a73a995638ae1d7288003d08739476bf3cba692637
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/README.md:
   hash: ce56464b22902ff6dcd976aba036dbcbeac494535fc676ebd5e116c396e66038
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/csvdsl.cabal:
-  hash: ba1e119b69de3af7f7180c6d062fd473f08e7d7aafbff96481dc223c720f122c
+  hash: 578647ca536f1d7092f7ad912faa30a637ef56a6faf16f7ddc7963719e101ddd
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/src/Grammar.y:
-  hash: d27592b5f485ccc5e6321851f95b525e9968a8699e8053a2f8e19663166f0c07
+  hash: 10dbe8ace3af9feb39c819cf80109c3b3d375133abe62ff62249d8ae3321a0c6
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/src/Interpreter.hs:
-  hash: 9cef1114c11a9aa33b0533b0065a013b03644b15a004e0d0aaf854882029a110
+  hash: 098bf412fabf6ecdd2aca15edab46e6844f321b895b4f7f64a0ebf4805224790
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/src/Main.hs:
   hash: a19b463359c5e1e0dee4d99cb4a3fbef85da7979d6ed168947f58e745b34caa7
 /Users/natashaudani/Desktop/PLC-Group-53/csvdsl/src/Tokens.x:
-  hash: fb6a7aa6357f5d22af3a8ad0eadb30797d1e55451422d2a466c434b3d543c3a0
+  hash: 4bf33cc12d900f2c754f9b768c094a610845d854aca871e25f910d26da35aa73

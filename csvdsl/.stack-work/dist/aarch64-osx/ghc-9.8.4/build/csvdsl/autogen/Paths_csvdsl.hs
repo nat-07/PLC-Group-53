@@ -47,7 +47,7 @@ getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: 
 
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 bindir     = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/bin"
-libdir     = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/lib/aarch64-osx-ghc-9.8.4/csvdsl-0.1.0.0-2HVdAUwpy681ttv8qLw9f1-csvdsl"
+libdir     = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/lib/aarch64-osx-ghc-9.8.4/csvdsl-0.1.0.0-Fg8RayQPe7lLImEFczP2ft-csvdsl"
 dynlibdir  = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/lib/aarch64-osx-ghc-9.8.4"
 datadir    = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/share/aarch64-osx-ghc-9.8.4/csvdsl-0.1.0.0"
 libexecdir = "/Users/natashaudani/Desktop/PLC-Group-53/csvdsl/.stack-work/install/aarch64-osx/675ec94e2676391614c6aabb55ba26b9b0d04710d2224d18d7f557d2927c6530/9.8.4/libexec/aarch64-osx-ghc-9.8.4/csvdsl-0.1.0.0"
