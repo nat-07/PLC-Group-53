@@ -1,1 +1,1 @@
-DO DROP COLUMN 2 IN A.csv
+DO LEFT MERGE Q.csv TO P.csv 
