@@ -11,7 +11,6 @@ import Text.ParserCombinators.ReadP (string)
 import qualified Data.Map.Strict as Map
 
 
-
 interpret :: Exp2 -> IO String
 
 
