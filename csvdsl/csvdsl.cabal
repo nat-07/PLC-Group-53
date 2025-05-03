@@ -32,5 +32,4 @@ executable csvdsl
                        -Wmissing-export-lists
                        -Wmissing-home-modules
                        -Wpartial-fields
-                       -Wredundant-constraints
-
+           

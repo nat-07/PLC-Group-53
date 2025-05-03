@@ -68,12 +68,12 @@ query : SELECT '(' selectList ')' TO filename { SELECT $3 $6}
       | DO task WHERE '(' condition ')' TO filename { DOWHERE $2 $5 $8 }
       | PRINT filename {PRINT $2}
 
-condition : selectItem '=' string { CONDITIONEQSTRING $1 $3 }
-          | selectItem '!=' string { CONDITIONNEQSTRING $1 $3 }
-          | selectItem '=' selectItem { CONDITIONEQITEM $1 $3 }
-          | selectItem '!=' selectItem { CONDITIONNEQITEM $1 $3 }
-          | selectItem IS EMPTY { CONDITIONISEMPTY $1 }
-          | selectItem IS NOT EMPTY { CONDITIONISNOTEMPTY $1 }
+condition : columnIndex '=' string { CONDITIONEQSTRING $1 $3 }
+          | columnIndex '!=' string { CONDITIONNEQSTRING $1 $3 }
+          | columnIndex '=' columnIndex {CONDITIONEQCOLUMN $1 $3}
+          | columnIndex '!=' columnIndex { CONDITIONNEQCOLUMN $1 $3 }
+          | columnIndex EMPTY { CONDITIONISEMPTY $1 }
+          | columnIndex NOT EMPTY { CONDITIONISNOTEMPTY $1 }
           | condition AND condition { AND $1 $3 }
           | condition OR condition { OR $1 $3 }
 
@@ -151,6 +151,8 @@ data Exp2 = SELECT Exp2 Exp2
           | LEFTMERGECSV Exp2 Exp2 
           | FILENAME String 
           | RESULTOF Exp2 
+          | CONDITIONEQCOLUMN Exp2 Exp2
+          | CONDITIONNEQCOLUMN Exp2 Exp2
           | COLUMN Int 
           | STR String 
           | NAME String 
