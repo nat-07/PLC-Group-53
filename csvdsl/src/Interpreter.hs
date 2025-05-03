@@ -9,6 +9,9 @@ import GHC.IO.Exception (IOException(ioe_filename))
 import Prelude (putStrLn)
 import Text.ParserCombinators.ReadP (string)
 import qualified Data.Map.Strict as Map
+import Data.Bits (Bits(xor))
+
+
 
 
 interpret :: Exp2 -> IO String
@@ -26,8 +29,8 @@ interpret (SELECT x filename) = do
     putStrLn "Running SELECT"
     column <- interpret x
     file <- interpret filename
-    writeFile (show file ++ ".csv") column
-    putStrLn "Wrote result to output.csv"
+    writeFile (show file) column
+    putStrLn ("Wrote result to " ++ file)
     return column
 
 -- DO -- 
@@ -35,8 +38,8 @@ interpret (DO task filename) = do
     putStrLn "Running DO"
     column <- interpret task
     file <- interpret filename
-    writeFile (show file ++ ".csv") column
-    putStrLn "Wrote result to output.csv"
+    writeFile file column
+    putStrLn ("Wrote result to " ++ file)
     return column
 
 
@@ -55,7 +58,7 @@ interpret (FILENAME name) = return name
 
 -- STR -- 
 interpret (STR s) =
-    return $ "String: " ++ s
+    return s
 
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
@@ -103,14 +106,15 @@ interpret (PERMUTE x) = do
     return "Permutation finished"
 
 -- COPY a string to a file --
----interpret (COPY file string) = do 
-    ---return "Running COPY Task:"
-   --- filename <- interpret file 
-    --contents <- Prelude.readFile filename
-   -- let rows = lines contents 
-    ---copiedRows <- copyString rows string []
-    ---putStrLn "Copy finished"
-    ---return copiedRows
+interpret (COPY file string) = do
+    putStrLn "Running COPY Task:"
+    filename <- interpret file
+    newString <- interpret string
+    contents <- readFile filename
+    let rows = lines contents 
+    let copiedRows = copyString rows newString
+    putStrLn "Copy finished"
+    return (unlines copiedRows)
 
 -- COPYIN a string to a file of a speciifc column  --
 interpret (COPYIN col file string) = do 
@@ -119,6 +123,7 @@ interpret (COPYIN col file string) = do
     interpret file
     interpret string
     return "copy finished"
+
 
 -- COPYIN a string to a file of a speciifc column  --
 interpret (LEFTMERGEON file1 file2 col) = do 
@@ -279,4 +284,6 @@ getKey row i = if i < length row then row !! i else ""
 fillEmpty :: String -> String -> String
 fillEmpty p q = if null p then q else p
 
-copyString (r:[]) string copiedRows = copiedRows ++ [r ++ string ++ r]
+copyString :: [String] -> String -> [String]
+copyString [] _ = []
+copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs string

@@ -1,0 +1,1 @@
+DO COPY A.csv WITH (FOO) TO t4output.csv;
