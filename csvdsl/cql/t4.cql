@@ -1,2 +1,2 @@
 DO COPY A.csv WITH (FOO) TO T4.csv;
-PRINT
+PRINT T4.csv;

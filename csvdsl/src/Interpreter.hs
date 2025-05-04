@@ -1,6 +1,7 @@
 module Interpreter where
 import System.Exit (exitFailure) 
 import Grammar
+import Data.List (sort)
 import Data.List.Split (splitOn)
 import Prelude 
 import Debug.Trace (trace)
@@ -43,7 +44,7 @@ interpret (ANDQUERY x y) = do
 interpret (SELECT x filename) = do
     column <- interpret x
     file <- interpret filename
-    writeFile (show file) column
+    writeFile (show file) (sortCsv column)
     return column
 
 -- DO -- 
@@ -51,23 +52,39 @@ interpret (DO task filename) = do
     column <- interpret task
     file <- interpret filename
     let cleaned = intercalate "\n" (filter (not . null) (lines column))
-    writeFile file cleaned
+    writeFile file (sortCsv cleaned)
     return cleaned
 
 
--- GET --
+-- Interpret GET operation
 interpret (GET col csvExpr) = do
     trace "Running GET" (return ())
     filename <- interpret csvExpr
+    trace ("Filename: " ++ filename) (return ())
     contents <- readFile filename
+    trace ("File contents:\n" ++ contents) (return ())
     validatedContents <- validateCsvFile contents
+    trace ("Validated file contents:\n" ++ validatedContents) (return ())
+    
     let rows = map (splitOn ",") (lines validatedContents)
+    trace ("Rows after splitting by commas:\n" ++ intercalate "\n" (map show rows)) (return ())
+    
     let colIndex = getColumnIndex col
-    let colValues = [ row !! colIndex | row <- rows, length row > colIndex ]
-    trace ("Successfully got values: " ++ intercalate "\n" colValues) (return ())
-    return $ intercalate "\n" colValues
+    trace ("Column index for '" ++ show col ++ "': " ++ show colIndex) (return ())
+    
+    let colValues = [ if length row > colIndex then row !! colIndex else "" | row <- rows ]
+    trace ("Extracted column values:\n" ++ show colValues) (return ())
+    let newColValues = map (\x -> if x == "" then " " else x) colValues
+    trace ("Extracted column values:\n" ++ show newColValues) (return ())
 
-
+    -- Check if colValues is empty and return " " if it is
+    if null newColValues
+        then do
+            trace "No values found for the column." (return ())
+            return " "
+        else do
+            trace ("Returning column values:\n" ++ intercalate "\n" newColValues) (return ())
+            return $ intercalate "\n" newColValues
 interpret (FILENAME name) = return name
 
 -- STR -- 
@@ -78,9 +95,13 @@ interpret (PRINT x) = do
     filename <- interpret x
     raw <- readFile filename
     let contents = intercalate "\n" . filter (not . null) . lines $ raw
-    trace ("Printing contents of " ++ filename) (return ())
-    putStrLn contents
-    return contents
+    if null contents
+        then trace ("Empty file") 
+        return contents
+        else do
+            trace ("Printing contents of " ++ filename) (return ())
+            putStrLn contents
+            return contents
     
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
@@ -173,18 +194,17 @@ interpret (LEFTMERGE file1 file2 col) = do
 
 -- Conditions for tasks --
 interpret (DOWHERE task cond filename) = do
-    trace "Running DOWHERE with condition" (return ())
-
-    fname <- interpret filename
-    contents <- readFile fname
-    validatedContents <- validateCsvFile contents
-    let rows = lines validatedContents
+    trace "Running DOWHERE" (return ())
+    file <- interpret filename
+    contents <- interpret task
+    let rows = lines contents
         rowData = map (splitOn ",") rows
-
     filtered <- filterRows cond rowData
-
-    let result = intercalate "\n" (map (intercalate ",") filtered)
-    return result
+    -- Evaluate the selection expression only on filtered rows
+    filtered <- filterRows cond rowData
+    writeFile file (sortCsv (intercalate "\n" filtered))
+    trace ("Wrote result to " ++ file) (return ())
+    return $ intercalate "\n" filtered
 
 -- Conditions for Select statements --
 interpret (SELECTWHERE selectExpr cond filename) = do
@@ -194,11 +214,9 @@ interpret (SELECTWHERE selectExpr cond filename) = do
     let rows = lines contents
         rowData = map (splitOn ",") rows
     filtered <- filterRows cond rowData
-    -- Evaluate the selection expression only on filtered rows
-    let selected = map (selectFromRow selectExpr) filtered
-    writeFile file (intercalate "\n" selected)
+    writeFile file (sortCsv (intercalate "\n" filtered))
     trace ("Wrote result to " ++ file) (return ())
-    return $ intercalate "\n" selected
+    return $ intercalate "\n" filtered
 
 
 interpret expr = return $ "Unimplemented: " ++ show expr
@@ -333,10 +351,17 @@ copyString :: [String] -> String -> [String]
 copyString [] _ = []
 copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs string
 
-filterRows :: Exp2 -> [Row] -> IO [Row]
+filterRows :: Exp2 -> [Row] -> IO [[Char]]
 filterRows cond rows = do
-    return [row | row <- rows, evaluateCondition cond row]
+    let filtered = [row | row <- rows, evaluateCondition cond row]
+    let csvLines = map (intercalate ",") filtered
+    return csvLines
 
+-- Apply trim to every field in a row
+cleanRow :: String -> String
+cleanRow row = intercalate "," $ map trim $ splitOn "," row
+
+-- Validate and clean CSV contents
 validateCsvFile :: String -> IO String
 validateCsvFile contents
     | null contents = do
@@ -344,10 +369,33 @@ validateCsvFile contents
         exitFailure
     | otherwise = do
         let rows = lines contents
-        let parsedRows = map (splitOn ",") rows
-        let arities = map length parsedRows
+        let cleanedRows = map (map trim . splitOn ",") rows
+        let arities = map length cleanedRows
         if not (all (== head arities) (tail arities))
             then do
                 trace "Invalid CSV format: inconsistent number of fields." (return ())
                 exitFailure
-            else return contents  -- Return the raw string after validation
+            else return $ unlines (map (intercalate ",") cleanedRows)
+
+-- Split on comma *manually* to allow whitespace trimming
+splitCsvLine :: String -> [String]
+splitCsvLine [] = [""]
+splitCsvLine (c:cs)
+    | c == ','  = "" : rest
+    | otherwise = (c : head rest) : tail rest
+  where
+    rest = splitCsvLine cs
+
+-- Trim all fields in a row
+trimRowFields :: String -> String
+trimRowFields row =
+    let fields = splitCsvLine row
+    in intercalate "," (map trim fields)
+
+-- Sort all rows after trimming fields
+sortCsv :: String -> String
+sortCsv contents =
+    let rows = lines contents
+        cleaned = map trimRowFields rows
+        sorted = sort cleaned
+    in unlines sorted
