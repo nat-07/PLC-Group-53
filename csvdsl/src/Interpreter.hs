@@ -1,5 +1,5 @@
 module Interpreter where
-
+import System.Exit (exitFailure) 
 import Grammar
 import Data.List.Split (splitOn)
 import Prelude 
@@ -41,21 +41,17 @@ interpret (ANDQUERY x y) = do
 
 -- SELECT -- 
 interpret (SELECT x filename) = do
-    trace "Running SELECT" (return ())
     column <- interpret x
     file <- interpret filename
     writeFile (show file) column
-    trace ("Wrote result to " ++ file) (return ())
     return column
 
 -- DO -- 
 interpret (DO task filename) = do
-    trace "Running DO" (return ())
     column <- interpret task
     file <- interpret filename
     let cleaned = intercalate "\n" (filter (not . null) (lines column))
     writeFile file cleaned
-    trace ("Wrote result to " ++ file) (return ())
     return cleaned
 
 
@@ -64,11 +60,13 @@ interpret (GET col csvExpr) = do
     trace "Running GET" (return ())
     filename <- interpret csvExpr
     contents <- readFile filename
-    let rows = map (splitOn ",") (lines contents)
+    validatedContents <- validateCsvFile contents
+    let rows = map (splitOn ",") (lines validatedContents)
     let colIndex = getColumnIndex col
     let colValues = [ row !! colIndex | row <- rows, length row > colIndex ]
     trace ("Successfully got values: " ++ intercalate "\n" colValues) (return ())
     return $ intercalate "\n" colValues
+
 
 interpret (FILENAME name) = return name
 
@@ -78,10 +76,12 @@ interpret (STR s) =
 
 interpret (PRINT x) = do
     filename <- interpret x
-    contents <- fmap (intercalate "\n" . filter (not . null) . lines) (readFile filename)
+    raw <- readFile filename
+    let contents = intercalate "\n" . filter (not . null) . lines $ raw
     trace ("Printing contents of " ++ filename) (return ())
     putStrLn contents
     return contents
+    
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
 interpret (ANDSELECT x y) = do
@@ -113,8 +113,9 @@ interpret (PRODUCT x y) = do
 interpret (DROP col file) = do 
     trace ("Running DROP Task: Dropping column " ++ show col ++ " in file " ++ show file) (return ())
     filename <- interpret file
-    contents <- Prelude.readFile filename
-    let rows = lines contents
+    contents <- readFile filename
+    validatedContents <- validateCsvFile contents
+    let rows = lines validatedContents
     let index = getColumnIndex col
     let droppedLines = map (dropColumn index) rows
     let result = intercalate "\n" droppedLines
@@ -133,7 +134,8 @@ interpret (COPY file string) = do
     filename <- interpret file
     newString <- interpret string
     contents <- readFile filename
-    let rows = lines contents 
+    validatedContents <- validateCsvFile contents
+    let rows = lines validatedContents 
     let copiedRows = copyString rows newString
     trace "Copy finished" (return ())
     return (intercalate "\n" copiedRows)
@@ -175,7 +177,8 @@ interpret (DOWHERE task cond filename) = do
 
     fname <- interpret filename
     contents <- readFile fname
-    let rows = lines contents
+    validatedContents <- validateCsvFile contents
+    let rows = lines validatedContents
         rowData = map (splitOn ",") rows
 
     filtered <- filterRows cond rowData
@@ -282,18 +285,21 @@ leftMerge file1 file2 keyIndex = do
     file2Name <- file2
 
     leftContents <- readFile file1Name
+    validatedLeftContents <- validateCsvFile leftContents
     rightContents <- readFile file2Name
+    validatedRightContents <- validateCsvFile rightContents
+
 
     putStrLn ""
     putStrLn "left contents: "
-    putStrLn leftContents
+    putStrLn validatedLeftContents
 
     putStrLn ""
     putStrLn "right contents: "
-    putStrLn rightContents
+    putStrLn validatedRightContents
     putStrLn ""
 
-    let result = leftMergeFill keyIndex leftContents rightContents
+    let result = leftMergeFill keyIndex validatedLeftContents validatedRightContents
     putStrLn "Left merge finished"
     return result
 
@@ -330,3 +336,18 @@ copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs stri
 filterRows :: Exp2 -> [Row] -> IO [Row]
 filterRows cond rows = do
     return [row | row <- rows, evaluateCondition cond row]
+
+validateCsvFile :: String -> IO String
+validateCsvFile contents
+    | null contents = do
+        trace "File is empty. Stopping execution." (return ())
+        exitFailure
+    | otherwise = do
+        let rows = lines contents
+        let parsedRows = map (splitOn ",") rows
+        let arities = map length parsedRows
+        if not (all (== head arities) (tail arities))
+            then do
+                trace "Invalid CSV format: inconsistent number of fields." (return ())
+                exitFailure
+            else return contents  -- Return the raw string after validation

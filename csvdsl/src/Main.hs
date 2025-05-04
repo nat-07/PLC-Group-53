@@ -21,10 +21,8 @@ main' = do
     putStrLn ("Parsing: " ++ sourceText)
     let parsedProg = parseCalc (alexScanTokens sourceText)
     putStrLn ("Parsed as: " ++ show parsedProg)
-    (result) <- interpret parsedProg
-    putStrLn "Result:"
-    putStrLn result
-
+    interpret parsedProg
+    return ()
 -- Error handler for parsing issues
 noParse :: ErrorCall -> IO ()
 noParse e = hPutStrLn stderr $ "Error occurred: " ++ show e
