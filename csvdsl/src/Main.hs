@@ -21,7 +21,7 @@ main' = do
     putStrLn ("Parsing: " ++ sourceText)
     let parsedProg = parseCalc (alexScanTokens sourceText)
     putStrLn ("Parsed as: " ++ show parsedProg)
-    (result, _) <- interpret Map.empty parsedProg
+    (result) <- interpret parsedProg
     putStrLn "Result:"
     putStrLn result
 

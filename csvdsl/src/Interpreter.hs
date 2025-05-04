@@ -53,9 +53,10 @@ interpret (DO task filename) = do
     trace "Running DO" (return ())
     column <- interpret task
     file <- interpret filename
-    writeFile file column
+    let cleaned = intercalate "\n" (filter (not . null) (lines column))
+    writeFile file cleaned
     trace ("Wrote result to " ++ file) (return ())
-    return column
+    return cleaned
 
 
 -- GET --
@@ -66,8 +67,8 @@ interpret (GET col csvExpr) = do
     let rows = map (splitOn ",") (lines contents)
     let colIndex = getColumnIndex col
     let colValues = [ row !! colIndex | row <- rows, length row > colIndex ]
-    trace ("Successfully got values: " ++ unlines colValues) (return ())
-    return $ unlines colValues
+    trace ("Successfully got values: " ++ intercalate "\n" colValues) (return ())
+    return $ intercalate "\n" colValues
 
 interpret (FILENAME name) = return name
 
@@ -77,9 +78,9 @@ interpret (STR s) =
 
 interpret (PRINT x) = do
     filename <- interpret x
-    contents <- readFile filename
+    contents <- fmap (intercalate "\n" . filter (not . null) . lines) (readFile filename)
     trace ("Printing contents of " ++ filename) (return ())
-    putStrLn contents 
+    putStrLn contents
     return contents
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
@@ -116,7 +117,7 @@ interpret (DROP col file) = do
     let rows = lines contents
     let index = getColumnIndex col
     let droppedLines = map (dropColumn index) rows
-    let result = unlines droppedLines
+    let result = intercalate "\n" droppedLines
     trace "Dropped column successfully." (return ())
     return result
 
@@ -135,7 +136,7 @@ interpret (COPY file string) = do
     let rows = lines contents 
     let copiedRows = copyString rows newString
     trace "Copy finished" (return ())
-    return (unlines copiedRows)
+    return (intercalate "\n" copiedRows)
 
 -- COPYIN a string to a file of a speciifc column  --
 interpret (COPYIN col file string) = do 
@@ -179,7 +180,7 @@ interpret (DOWHERE task cond filename) = do
 
     filtered <- filterRows cond rowData
 
-    let result = unlines (map (intercalate ",") filtered)
+    let result = intercalate "\n" (map (intercalate ",") filtered)
     return result
 
 -- Conditions for Select statements --
@@ -192,9 +193,9 @@ interpret (SELECTWHERE selectExpr cond filename) = do
     filtered <- filterRows cond rowData
     -- Evaluate the selection expression only on filtered rows
     let selected = map (selectFromRow selectExpr) filtered
-    writeFile file (unlines selected)
+    writeFile file (intercalate "\n" selected)
     trace ("Wrote result to " ++ file) (return ())
-    return $ unlines selected
+    return $ intercalate "\n" selected
 
 
 interpret expr = return $ "Unimplemented: " ++ show expr
@@ -244,3 +245,88 @@ evaluateCondition (OR cond1 cond2) row =
     in trace ("[OR] " ++ show r1 ++ " OR " ++ show r2 ++ ": " ++ show result) result
 
 evaluateCondition _ _ = trace "[DEFAULT] Condition did not match any known pattern. Returning False." False
+
+
+getColumnIndex :: Exp2 -> Int
+getColumnIndex (COLUMN i) = i-1
+getColumnIndex _ = error "Expected a COLUMN expression with an index."
+
+getFileName :: Exp2 -> String
+getFileName (FILENAME name) = name
+getFileName _ = error "Expected a FILE expression with a valid filename."
+
+mergeColumns :: String -> String -> String
+mergeColumns colA colB =
+    let rowsA = lines colA
+        rowsB = lines colB
+        paired = zip rowsA rowsB
+    in (intercalate "\n" [a ++ "," ++ b | (a, b) <- paired])
+
+cartesianProduct :: String -> String -> String
+cartesianProduct tableA tableB =
+    let rowsA = lines tableA
+        rowsB = lines tableB
+        result = [a ++ "," ++ b | a <- rowsA, b <- rowsB]
+    in (intercalate "\n" result)
+
+dropColumn :: Int -> String -> String 
+dropColumn index line = 
+    let columns = splitOn "," line
+    in (intercalate "," (take index columns ++ drop (index+1) columns))
+    
+leftMerge :: IO String -> IO String -> Int -> IO String
+leftMerge file1 file2 keyIndex = do
+    putStrLn $ "Running LEFTMERGE on column " ++ show (keyIndex+1)
+
+    file1Name <- file1
+    file2Name <- file2
+
+    leftContents <- readFile file1Name
+    rightContents <- readFile file2Name
+
+    putStrLn ""
+    putStrLn "left contents: "
+    putStrLn leftContents
+
+    putStrLn ""
+    putStrLn "right contents: "
+    putStrLn rightContents
+    putStrLn ""
+
+    let result = leftMergeFill keyIndex leftContents rightContents
+    putStrLn "Left merge finished"
+    return result
+
+
+leftMergeFill :: Int -> String -> String -> String
+leftMergeFill keyIndex leftStr rightStr = 
+    let leftRows = lines leftStr
+        rightRows = lines rightStr
+        leftColumns = map (splitOn ",") leftRows
+        rightColumns = map (splitOn ",") rightRows
+
+        mapRight = Map.fromListWith (++) [(getKey row keyIndex, [row]) | row <- rightColumns, length row > keyIndex]
+        results = concatMap (\row -> mergeWithRight mapRight row keyIndex) leftColumns
+
+    in intercalate "\n" $ map (intercalate ",") results
+
+mergeWithRight :: Map.Map String [[String]] -> [String] -> Int -> [[String]]
+mergeWithRight rightMap leftRow keyIndex = 
+    let key = getKey leftRow keyIndex
+    in case Map.lookup key rightMap of
+        Nothing -> []
+        Just rightRows -> [zipWith fillEmpty leftRow rightRow | rightRow <- rightRows]
+
+getKey :: [String] -> Int -> String
+getKey row i = if i < length row then row !! i else ""
+
+fillEmpty :: String -> String -> String
+fillEmpty p q = if null p then q else p
+
+copyString :: [String] -> String -> [String]
+copyString [] _ = []
+copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs string
+
+filterRows :: Exp2 -> [Row] -> IO [Row]
+filterRows cond rows = do
+    return [row | row <- rows, evaluateCondition cond row]
