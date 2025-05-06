@@ -1,0 +1,12 @@
+name: csvdsl
+version: 0.1.0.0
+dependencies:
+  - base >= 4.7 && < 5
+  - parsec  # or any parser libraries you're using
+
+executables:
+  cql:
+    main: Main.hs
+    source-dirs: src
+    dependencies:
+      - base

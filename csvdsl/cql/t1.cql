@@ -1,2 +1,2 @@
 DO PRODUCT (READ A.csv) TIMES (READ B.csv) TO T1.csv;
-PRINT T1.csv;
+PRINT T1.csv; 
