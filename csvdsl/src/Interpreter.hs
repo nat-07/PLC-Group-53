@@ -293,7 +293,7 @@ fillEmpty p q = if null p then q else p
 
 copyString :: [String] -> String -> [String]
 copyString [] _ = []
-copyString (r:rs) string = (r ++ "," ++ string) : copyString rs string
+copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs string
 
 filterRows :: Exp2 -> [Row] -> IO [[Char]]
 filterRows cond rows = do
