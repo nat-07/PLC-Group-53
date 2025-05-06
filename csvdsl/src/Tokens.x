@@ -22,10 +22,13 @@ tokens :- -- Delimiter begins the rules (the name is irrelevant)
 
   $white+       ; -- ignores whitespace
   "--".*        ; -- ignores '--' followed by any characters (for comments)
+  "=="             {\_ -> TokenEqString}
+  "!=="             {\_ -> TokenNEqString}
   "SELECT"         { \_ -> TokenSelect }
   "FROM"           { \_ -> TokenFrom }
   "WHERE"          { \_ -> TokenWhere }
   "GET"            { \_ -> TokenGet }
+  "READ"           {\_ -> TokenRead}
   "COLUMN"         { \_ -> TokenColumn }
   "OF"             { \_ -> TokenOf }
   "AND"            { \_ -> TokenAnd }
@@ -45,6 +48,7 @@ tokens :- -- Delimiter begins the rules (the name is irrelevant)
   "IS"             { \_ -> TokenIs}
   "NOT"              { \_ -> TokenNot}
   "EMPTY"              { \_ -> TokenEmpty}
+  "EMPTYCOL"        { \_ -> TokenEmptyCol}
   "RESULT"          { \_ -> TokenResult }
   "ON"              { \_ -> TokenOn }
   "PRINT"           { \_ -> TokenPrint}
@@ -99,7 +103,11 @@ data Token
   | TokenInt Int
   | TokenComma
   | TokenSemiColon
+  | TokenEmptyCol
   | TokenPrint
+  | TokenRead
+  | TokenNEqString
+  | TokenEqString
   | TokenColumnIndex Int
   | TokenFileName String
   | TokenString String

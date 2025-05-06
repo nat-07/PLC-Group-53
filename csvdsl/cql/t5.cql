@@ -1,2 +1,2 @@
-DO LEFT MERGE P.csv TO Q.csv ON COLUMN 2 TO T5.csv;
+DO LEFT MERGE (READ P.csv) TO (READ Q.csv) ON COLUMN 1 TO T5.csv;
 PRINT T5.csv;

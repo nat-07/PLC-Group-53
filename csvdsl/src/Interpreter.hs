@@ -36,55 +36,56 @@ interpret :: Exp2 -> IO String
 -- ANDQUERY --
 -- Left Most Inner Most Associativity 
 interpret (ANDQUERY x y) = do
-    trace ("Querying " ++ show x) (return ())
     interpret x
     interpret y
 
--- SELECT -- 
-interpret (SELECT x filename) = do
-    column <- interpret x
+
+-- SELECT--
+interpret (SELECT task filename) = do
+    column <- interpret task
     file <- interpret filename
-    writeFile (show file) (sortCsv column)
-    return column
+
+    let cleanedLines = filter (not . null) (lines column)
+        cleaned = intercalate "\n" cleanedLines
+        finalOutput = sortCsv cleaned
+        finalOutput' = if not (null finalOutput) && last finalOutput == '\n'
+                       then init finalOutput
+                       else finalOutput
+
+    writeFile file finalOutput'
+    return finalOutput'
 
 -- DO -- 
 interpret (DO task filename) = do
     column <- interpret task
     file <- interpret filename
-    let cleaned = intercalate "\n" (filter (not . null) (lines column))
-    writeFile file (sortCsv cleaned)
-    return cleaned
 
+    let cleanedLines = filter (not . null) (lines column)
+        cleaned = intercalate "\n" cleanedLines
+        finalOutput = sortCsv cleaned
+        finalOutput' = if not (null finalOutput) && last finalOutput == '\n'
+                       then init finalOutput
+                       else finalOutput
+
+    writeFile file finalOutput'
+    return finalOutput'
 
 -- Interpret GET operation
 interpret (GET col csvExpr) = do
-    trace "Running GET" (return ())
     filename <- interpret csvExpr
-    trace ("Filename: " ++ filename) (return ())
     contents <- readFile filename
-    trace ("File contents:\n" ++ contents) (return ())
     validatedContents <- validateCsvFile contents
-    trace ("Validated file contents:\n" ++ validatedContents) (return ())
-    
     let rows = map (splitOn ",") (lines validatedContents)
-    trace ("Rows after splitting by commas:\n" ++ intercalate "\n" (map show rows)) (return ())
-    
-    let colIndex = getColumnIndex col
-    trace ("Column index for '" ++ show col ++ "': " ++ show colIndex) (return ())
-    
+    let colIndex = getColumnIndex col    
     let colValues = [ if length row > colIndex then row !! colIndex else "" | row <- rows ]
-    trace ("Extracted column values:\n" ++ show colValues) (return ())
     let newColValues = map (\x -> if x == "" then " " else x) colValues
-    trace ("Extracted column values:\n" ++ show newColValues) (return ())
-
     -- Check if colValues is empty and return " " if it is
     if null newColValues
         then do
-            trace "No values found for the column." (return ())
             return " "
         else do
-            trace ("Returning column values:\n" ++ intercalate "\n" newColValues) (return ())
             return $ intercalate "\n" newColValues
+
 interpret (FILENAME name) = return name
 
 -- STR -- 
@@ -96,176 +97,136 @@ interpret (PRINT x) = do
     raw <- readFile filename
     let contents = intercalate "\n" . filter (not . null) . lines $ raw
     if null contents
-        then trace ("Empty file") 
+        then 
         return contents
         else do
-            trace ("Printing contents of " ++ filename) (return ())
             putStrLn contents
             return contents
     
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
 interpret (ANDSELECT x y) = do
-    trace "Selecting the following items together:" (return ())
     columns <- interpret x
     nextColumn <- interpret y
     let merged = mergeColumns columns nextColumn
-    trace ("New merged:\n" ++ merged) (return ())
     return merged
 
--- THENTASK --
--- Left Most Inner Most Associativity 
-interpret (THENTASK tasklist task) = do
-    trace "Doing tasks in order:" (return ())
-    interpret tasklist
-    interpret task
-    return "Tasks done."
+-- READ --
+interpret (GETCSV filename) = do
+    file <- interpret filename
+    contents <- readFile file
+    validatedContents <- validateCsvFile contents
+    let rows = map (splitOn ",") (lines validatedContents)    
+    let cleanedRows = map (map (\x -> if null x then " " else x)) rows
+    let reconstructedLines = map (intercalate ",") cleanedRows
+    return (intercalate "\n" reconstructedLines)
+
 
 -- PRODUCT --
 interpret (PRODUCT x y) = do
-    trace "Running PRODUCT Task:" (return ())
     table1 <- interpret x
     table2 <- interpret y
     let product = cartesianProduct table1 table2
-    trace ("New Product:\n" ++ product) (return ())
     return product
 
 -- DROP --
 interpret (DROP col file) = do 
-    trace ("Running DROP Task: Dropping column " ++ show col ++ " in file " ++ show file) (return ())
-    filename <- interpret file
-    contents <- readFile filename
-    validatedContents <- validateCsvFile contents
-    let rows = lines validatedContents
+    contents <- interpret file
+    let rows = lines contents
     let index = getColumnIndex col
     let droppedLines = map (dropColumn index) rows
     let result = intercalate "\n" droppedLines
-    trace "Dropped column successfully." (return ())
     return result
-
--- PERMUTE -- 
-interpret (PERMUTE x) = do 
-    trace "Running PERMUTE Task:" (return ())
-    interpret x
-    return "Permutation finished"
 
 -- COPY a string to a file --
 interpret (COPY file string) = do
-    trace "Running COPY Task:" (return ())
-    filename <- interpret file
+    contents <- interpret file
     newString <- interpret string
-    contents <- readFile filename
-    validatedContents <- validateCsvFile contents
-    let rows = lines validatedContents 
+    let rows = lines contents 
     let copiedRows = copyString rows newString
-    trace "Copy finished" (return ())
     return (intercalate "\n" copiedRows)
 
--- COPYIN a string to a file of a speciifc column  --
-interpret (COPYIN col file string) = do 
-    trace "Running COPY Task:" (return ())
-    interpret col
-    interpret file
-    interpret string
-    return "copy finished"
-
-
--- COPYIN a string to a file of a speciifc column  --
-interpret (LEFTMERGEON file1 file2 col) = do 
-    let keyIndex = getColumnIndex col
-    leftMerge (interpret file1) (interpret file2) keyIndex
-
--- LEFT MERGE two files
-interpret (LEFTMERGECSV file1 file2) = do
-    leftMerge (interpret file1) (interpret file2) 0
+interpret (COPYEMPTYCOL file) = do
+    contents <- interpret file
+    let rows = lines contents 
+    let copiedRows = copyString rows " "
+    return (intercalate "\n" copiedRows)
 
 -- LEFT MERGE two files of a specific column --
 interpret (LEFTMERGE file1 file2 col) = do
-    trace "Running LEFT MERGE Task (LeftMerge):" (return ())
-
     leftContents <- interpret file1
     rightContents <- interpret file2
-
     let keyIndex = getColumnIndex col
         result = leftMergeFill keyIndex leftContents rightContents
-    
-    trace "Left merge finished" (return ())
     return result
 
 -- Conditions for tasks --
 interpret (DOWHERE task cond filename) = do
-    trace "Running DOWHERE" (return ())
     file <- interpret filename
     contents <- interpret task
     let rows = lines contents
         rowData = map (splitOn ",") rows
     filtered <- filterRows cond rowData
-    -- Evaluate the selection expression only on filtered rows
-    filtered <- filterRows cond rowData
     writeFile file (sortCsv (intercalate "\n" filtered))
-    trace ("Wrote result to " ++ file) (return ())
     return $ intercalate "\n" filtered
 
 -- Conditions for Select statements --
 interpret (SELECTWHERE selectExpr cond filename) = do
-    trace "Running SELECTWHERE" (return ())
     file <- interpret filename
     contents <- interpret selectExpr
     let rows = lines contents
         rowData = map (splitOn ",") rows
     filtered <- filterRows cond rowData
     writeFile file (sortCsv (intercalate "\n" filtered))
-    trace ("Wrote result to " ++ file) (return ())
     return $ intercalate "\n" filtered
-
 
 interpret expr = return $ "Unimplemented: " ++ show expr
 evaluateCondition :: Exp2 -> Row -> Bool
 evaluateCondition (CONDITIONEQSTRING (COLUMN colIndexExpr) (STR value)) row =
     let i = getColumnIndex (COLUMN colIndexExpr)
         result = i < length row && row !! i == value
-    in trace ("[EQSTRING] Checking if column " ++ show i ++ " == " ++ show value ++ ": " ++ show result) result
+    in result
 
 evaluateCondition (CONDITIONNEQSTRING (COLUMN colIndexExpr) (STR value)) row =
     let i = getColumnIndex (COLUMN colIndexExpr)
         result = i < length row && row !! i /= value
-    in trace ("[NEQSTRING] Checking if column " ++ show i ++ " /= " ++ show value ++ ": " ++ show result) result
+    in result
 
 evaluateCondition (CONDITIONISEMPTY (COLUMN colIndexExpr)) row =
     let i = getColumnIndex (COLUMN colIndexExpr)
         result = i < length row && (null (trim (row !! i)))
-    in trace ("[ISNOTEMPTY] Checking if Column " ++ show colIndexExpr ++ " is empty: " ++ show result) result
+    in result
 
 evaluateCondition (CONDITIONEQCOLUMN (COLUMN colIndexExpr1) (COLUMN colIndexExpr2)) row =
     let i1 = getColumnIndex (COLUMN colIndexExpr1)
         i2 = getColumnIndex (COLUMN colIndexExpr2)
         result = i1 < length row && i2 < length row && (row !! i1) == (row !! i2)
-    in trace ("[EQCOLUMN] Comparing columns " ++ show i1 ++ " and " ++ show i2 ++ ": " ++ show result) result
+    in result
 
 evaluateCondition (CONDITIONNEQCOLUMN (COLUMN colIndexExpr1) (COLUMN colIndexExpr2)) row =
     let i1 = getColumnIndex (COLUMN colIndexExpr1)
         i2 = getColumnIndex (COLUMN colIndexExpr2)
         result = i1 < length row && i2 < length row && (row !! i1) /= (row !! i2)
-    in trace ("[NEQCOLUMN] Comparing columns " ++ show i1 ++ " and " ++ show i2 ++ ": " ++ show result) result
+    in result
 
 evaluateCondition (CONDITIONISNOTEMPTY (COLUMN colIndexExpr)) row =
     let i = getColumnIndex (COLUMN colIndexExpr)
         result = i < length row && not (null (trim (row !! i)))
-    in trace ("[ISNOTEMPTY] Checking if Column " ++ show colIndexExpr ++ " is not empty: " ++ show result) result
+    in result
 
 evaluateCondition (AND cond1 cond2) row =
     let r1 = evaluateCondition cond1 row
         r2 = evaluateCondition cond2 row
         result = r1 && r2
-    in trace ("[AND] " ++ show r1 ++ " AND " ++ show r2 ++ ": " ++ show result) result
+    in result
 
 evaluateCondition (OR cond1 cond2) row =
     let r1 = evaluateCondition cond1 row
         r2 = evaluateCondition cond2 row
         result = r1 || r2
-    in trace ("[OR] " ++ show r1 ++ " OR " ++ show r2 ++ ": " ++ show result) result
+    in result
 
-evaluateCondition _ _ = trace "[DEFAULT] Condition did not match any known pattern. Returning False." False
+evaluateCondition _ _ = False
 
 
 getColumnIndex :: Exp2 -> Int
@@ -297,8 +258,6 @@ dropColumn index line =
     
 leftMerge :: IO String -> IO String -> Int -> IO String
 leftMerge file1 file2 keyIndex = do
-    putStrLn $ "Running LEFTMERGE on column " ++ show (keyIndex+1)
-
     file1Name <- file1
     file2Name <- file2
 
@@ -306,21 +265,8 @@ leftMerge file1 file2 keyIndex = do
     validatedLeftContents <- validateCsvFile leftContents
     rightContents <- readFile file2Name
     validatedRightContents <- validateCsvFile rightContents
-
-
-    putStrLn ""
-    putStrLn "left contents: "
-    putStrLn validatedLeftContents
-
-    putStrLn ""
-    putStrLn "right contents: "
-    putStrLn validatedRightContents
-    putStrLn ""
-
     let result = leftMergeFill keyIndex validatedLeftContents validatedRightContents
-    putStrLn "Left merge finished"
     return result
-
 
 leftMergeFill :: Int -> String -> String -> String
 leftMergeFill keyIndex leftStr rightStr = 
@@ -328,10 +274,8 @@ leftMergeFill keyIndex leftStr rightStr =
         rightRows = lines rightStr
         leftColumns = map (splitOn ",") leftRows
         rightColumns = map (splitOn ",") rightRows
-
         mapRight = Map.fromListWith (++) [(getKey row keyIndex, [row]) | row <- rightColumns, length row > keyIndex]
         results = concatMap (\row -> mergeWithRight mapRight row keyIndex) leftColumns
-
     in intercalate "\n" $ map (intercalate ",") results
 
 mergeWithRight :: Map.Map String [[String]] -> [String] -> Int -> [[String]]
@@ -349,7 +293,7 @@ fillEmpty p q = if null p then q else p
 
 copyString :: [String] -> String -> [String]
 copyString [] _ = []
-copyString (r:rs) string = (r ++ "," ++ string ++ "," ++ r) : copyString rs string
+copyString (r:rs) string = (r ++ "," ++ string) : copyString rs string
 
 filterRows :: Exp2 -> [Row] -> IO [[Char]]
 filterRows cond rows = do
@@ -361,22 +305,41 @@ filterRows cond rows = do
 cleanRow :: String -> String
 cleanRow row = intercalate "," $ map trim $ splitOn "," row
 
--- Validate and clean CSV contents
 validateCsvFile :: String -> IO String
 validateCsvFile contents
     | null contents = do
-        trace "File is empty. Stopping execution." (return ())
+        error "File is empty. Stopping execution."
         exitFailure
     | otherwise = do
-        let rows = lines contents
-        let cleanedRows = map (map trim . splitOn ",") rows
-        let arities = map length cleanedRows
-        if not (all (== head arities) (tail arities))
-            then do
-                trace "Invalid CSV format: inconsistent number of fields." (return ())
-                exitFailure
-            else return $ unlines (map (intercalate ",") cleanedRows)
+        -- Check if one-column CSV
+        let rawRows = lines contents
+        let cleanedRows = map (map trim . splitOn ",") rawRows
 
+        -- Special case: one-column + ends with newline (missing row after final \n)
+        let isOneColumn = all ((== 1) . length) cleanedRows
+        let endsWithNewline = not (null contents) && last contents == '\n'
+
+        let finalRows =
+              if isOneColumn && endsWithNewline
+                 then cleanedRows ++ [[""]]  -- Add an empty row for the trailing newline
+                 else cleanedRows
+
+
+        -- Check if CSV with multiple columns ends with an empty line
+        let hasMultipleColumns = any ((> 1) . length) finalRows
+        let endsWithNewline = not (null contents) && last contents == '\n'
+
+        if hasMultipleColumns && endsWithNewline
+            then do
+                error "Invalid CSV format: multiple columns with an empty line at the end."
+                exitFailure
+            else do
+                let arities = map length finalRows
+                if not (all (== head arities) (tail arities))
+                    then do
+                        error "Invalid CSV format: inconsistent number of fields."
+                        exitFailure
+                    else return $ unlines (map (intercalate ",") finalRows)
 -- Split on comma *manually* to allow whitespace trimming
 splitCsvLine :: String -> [String]
 splitCsvLine [] = [""]

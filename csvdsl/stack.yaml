@@ -33,16 +33,6 @@ packages:
 - .
 allow-newer: true
 
-
-executables:
-  csvdsl:
-    source-dirs: src
-    main: Main.hs
-    ghc-options: -Wall
-    build-tools:
-      - alex
-      - happy
-
 extra-deps:
   - array-0.5.7.0
   - split-0.2.3.4

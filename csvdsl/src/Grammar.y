@@ -19,7 +19,9 @@ import Tokens
     '!=' { TokenNeq }
     IS { TokenIs }
     NOT { TokenNot }
+    EMPTYCOL {TokenEmptyCol}
     EMPTY { TokenEmpty }
+    READ { TokenRead }
     AND { TokenAnd }
     OR { TokenOr }
     THEN { TokenThen }
@@ -40,6 +42,8 @@ import Tokens
     int { TokenInt $$ } 
     var { TokenVar $$ } 
     '=' { TokenEq } 
+    '==' { TokenEqString } 
+    '!==' { TokenNEqString } 
     '(' { TokenLParen } 
     ')' { TokenRParen }
     ';' {TokenSemiColon}
@@ -68,8 +72,8 @@ query : SELECT '(' selectList ')' TO filename { SELECT $3 $6}
       | DO task WHERE '(' condition ')' TO filename { DOWHERE $2 $5 $8 }
       | PRINT filename {PRINT $2}
 
-condition : columnIndex '=' string { CONDITIONEQSTRING $1 $3 }
-          | columnIndex '!=' string { CONDITIONNEQSTRING $1 $3 }
+condition : columnIndex '==' string { CONDITIONEQSTRING $1 $3 }
+          | columnIndex '!==' string { CONDITIONNEQSTRING $1 $3 }
           | columnIndex '=' columnIndex {CONDITIONEQCOLUMN $1 $3}
           | columnIndex '!=' columnIndex { CONDITIONNEQCOLUMN $1 $3 }
           | columnIndex EMPTY { CONDITIONISEMPTY $1 }
@@ -83,25 +87,21 @@ selectListRest : ',' selectItem selectListRest { $2 : $3 }
                |                 { [] }
 
 selectItem : GET columnIndex OF csv { GET $2 $4 }
+           | READ csv {GETCSV $2}
 
 task : product { $1 }
-     | permutation { $1 }
      | copy { $1 }
      | leftMerge { $1 }
      | drop { $1 }
 
 product : PRODUCT '(' selectList ')' TIMES '(' selectList ')' { PRODUCT $3 $7 }
 
-drop : DROP columnIndex IN csv { DROP $2 $4 }
+drop : DROP columnIndex IN '(' selectList ')' { DROP $2 $5 }
 
-permutation : PERMUTE csv { PERMUTE $2 }
+copy : COPY '(' selectList ')' WITH string { COPY $3 $6 }
+     | COPY '(' selectList ')' WITH EMPTYCOL {COPYEMPTYCOL $3}
 
-copy : COPY csv WITH string { COPY $2 $4 }
-     | COPY columnIndex WITH string IN csv { COPYIN $2 $4 $6 }
-
-leftMerge : LEFT MERGE csv TO csv ON columnIndex { LEFTMERGEON $3 $5 $7 }
-          | LEFT MERGE csv TO csv { LEFTMERGECSV $3 $5 }
-          | LEFT MERGE '(' selectList ')' TO '(' selectList ')' ON columnIndex { LEFTMERGE $4 $8 $11 }
+leftMerge : LEFT MERGE '(' selectList ')' TO '(' selectList ')' ON columnIndex { LEFTMERGE $4 $8 $11 }
 
 csv : filename { $1 }
 
@@ -145,7 +145,7 @@ data Exp2 = SELECT Exp2 Exp2
           | DROP Exp2 Exp2
           | PERMUTE Exp2 
           | COPY Exp2 Exp2
-          | COPYIN Exp2 Exp2 Exp2 
+          | COPYEMPTYCOL Exp2 
           | LEFTMERGE Exp2 Exp2 Exp2
           | LEFTMERGEON Exp2 Exp2 Exp2 
           | LEFTMERGECSV Exp2 Exp2 
@@ -157,6 +157,7 @@ data Exp2 = SELECT Exp2 Exp2
           | STR String 
           | NAME String 
           | PRINT Exp2
+          | GETCSV Exp2
           | ANDQUERY Exp2 Exp2
           deriving Show
 } 

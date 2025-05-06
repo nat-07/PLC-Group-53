@@ -18,11 +18,10 @@ main' :: IO ()
 main' = do
     (fileName:_) <- getArgs
     sourceText <- readFile fileName
-    putStrLn ("Parsing: " ++ sourceText)
     let parsedProg = parseCalc (alexScanTokens sourceText)
-    putStrLn ("Parsed as: " ++ show parsedProg)
     interpret parsedProg
     return ()
+    
 -- Error handler for parsing issues
 noParse :: ErrorCall -> IO ()
 noParse e = hPutStrLn stderr $ "Error occurred: " ++ show e
