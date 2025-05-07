@@ -95,14 +95,12 @@ interpret (STR s) =
 interpret (PRINT x) = do
     filename <- interpret x
     raw <- readFile filename
-    let contents = intercalate "\n" . filter (not . null) . lines $ raw
-    if null contents
-        then 
-        return contents
+    let cleaned = filter (`notElem` [' ', '\t']) raw  -- Remove spaces and tabs only
+    if null cleaned
+        then return cleaned
         else do
-            putStrLn contents
-            return contents
-    
+            putStrLn cleaned
+            return cleaned
 -- ANDSELECT --
 -- Left Most Inner Most Associativity 
 interpret (ANDSELECT x y) = do
