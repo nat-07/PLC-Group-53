@@ -1,2 +1,2 @@
-DO COPY (GET COLUMN 1 OF A.csv) WITH (FOO) TO A4.csv;
+DO COPY (READ A.csv) WITH (foo) TO T4.csv;
 PRINT T4.csv;

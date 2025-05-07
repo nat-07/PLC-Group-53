@@ -24,7 +24,6 @@ import Tokens
     READ { TokenRead }
     AND { TokenAnd }
     OR { TokenOr }
-    THEN { TokenThen }
     PRODUCT { TokenProduct }
     TIMES { TokenTimes }
     DROP { TokenDrop }
@@ -37,7 +36,6 @@ import Tokens
     TO { TokenTo }
     ON { TokenOn }
     FILENAME { TokenFileName $$ }
-    RESULT { TokenResult }
     PRINT {TokenPrint}
     int { TokenInt $$ } 
     var { TokenVar $$ } 
@@ -74,6 +72,8 @@ query : SELECT '(' selectList ')' TO filename { SELECT $3 $6}
 
 condition : columnIndex '==' string { CONDITIONEQSTRING $1 $3 }
           | columnIndex '!==' string { CONDITIONNEQSTRING $1 $3 }
+          | columnIndex '==' '(' int  ')'  { CONDITIONEQSTRING $1 (STR (show $4)) }
+          | columnIndex '!==' '(' int ')'   { CONDITIONNEQSTRING $1 (STR (show $4)) }
           | columnIndex '=' columnIndex {CONDITIONEQCOLUMN $1 $3}
           | columnIndex '!=' columnIndex { CONDITIONNEQCOLUMN $1 $3 }
           | columnIndex EMPTY { CONDITIONISEMPTY $1 }
@@ -99,15 +99,16 @@ product : PRODUCT '(' selectList ')' TIMES '(' selectList ')' { PRODUCT $3 $7 }
 drop : DROP columnIndex IN '(' selectList ')' { DROP $2 $5 }
 
 copy : COPY '(' selectList ')' WITH string { COPY $3 $6 }
+     | COPY '(' selectList ')' WITH '(' int ')' {COPY $3 (STR (show $7))}
      | COPY '(' selectList ')' WITH EMPTYCOL {COPYEMPTYCOL $3}
 
 leftMerge : LEFT MERGE '(' selectList ')' TO '(' selectList ')' ON columnIndex { LEFTMERGE $4 $8 $11 }
 
 csv : filename { $1 }
 
-columnIndex : COLUMN int { COLUMN $2 }
+string : '(' var ')' {STR $2}
 
-string : '(' var ')' { STR $2 }
+columnIndex : COLUMN int { COLUMN $2 }
 
 filename : FILENAME  { FILENAME $1 }
 
@@ -135,7 +136,6 @@ data Exp2 = SELECT Exp2 Exp2
           | CONDITIONISEMPTY Exp2 
           | CONDITIONISNOTEMPTY Exp2
           | ANDSELECT Exp2 Exp2
-          | THENTASK Exp2 Exp2
           | AND Exp2 Exp2
           | OR Exp2 Exp2
           | DO Exp2 Exp2
@@ -147,15 +147,12 @@ data Exp2 = SELECT Exp2 Exp2
           | COPY Exp2 Exp2
           | COPYEMPTYCOL Exp2 
           | LEFTMERGE Exp2 Exp2 Exp2
-          | LEFTMERGEON Exp2 Exp2 Exp2 
-          | LEFTMERGECSV Exp2 Exp2 
           | FILENAME String 
           | RESULTOF Exp2 
           | CONDITIONEQCOLUMN Exp2 Exp2
           | CONDITIONNEQCOLUMN Exp2 Exp2
           | COLUMN Int 
           | STR String 
-          | NAME String 
           | PRINT Exp2
           | GETCSV Exp2
           | ANDQUERY Exp2 Exp2

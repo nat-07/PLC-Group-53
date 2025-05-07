@@ -40,6 +40,16 @@
   (major1) == 0 && (major2) <  7 || \
   (major1) == 0 && (major2) == 7 && (minor) <= 0)
 #endif /* MIN_VERSION_containers */
+/* package csvdsl-0.1.0.0 */
+#ifndef VERSION_csvdsl
+#define VERSION_csvdsl "0.1.0.0"
+#endif /* VERSION_csvdsl */
+#ifndef MIN_VERSION_csvdsl
+#define MIN_VERSION_csvdsl(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  1 || \
+  (major1) == 0 && (major2) == 1 && (minor) <= 0)
+#endif /* MIN_VERSION_csvdsl */
 /* package split-0.2.3.4 */
 #ifndef VERSION_split
 #define VERSION_split "0.2.3.4"
@@ -101,15 +111,15 @@
   (major1) == 2 && (major2) <  30 || \
   (major1) == 2 && (major2) == 30 && (minor) <= 0)
 #endif /* MIN_TOOL_VERSION_haddock */
-/* tool happy-2.1.5 */
+/* tool happy-2.0.2 */
 #ifndef TOOL_VERSION_happy
-#define TOOL_VERSION_happy "2.1.5"
+#define TOOL_VERSION_happy "2.0.2"
 #endif /* TOOL_VERSION_happy */
 #ifndef MIN_TOOL_VERSION_happy
 #define MIN_TOOL_VERSION_happy(major1,major2,minor) (\
   (major1) <  2 || \
-  (major1) == 2 && (major2) <  1 || \
-  (major1) == 2 && (major2) == 1 && (minor) <= 5)
+  (major1) == 2 && (major2) <  0 || \
+  (major1) == 2 && (major2) == 0 && (minor) <= 2)
 #endif /* MIN_TOOL_VERSION_happy */
 /* tool hpc-0.69 */
 #ifndef TOOL_VERSION_hpc
@@ -153,7 +163,7 @@
 #endif /* MIN_TOOL_VERSION_runghc */
 
 #ifndef CURRENT_COMPONENT_ID
-#define CURRENT_COMPONENT_ID "csvdsl-0.1.0.0-Fg8RayQPe7lLImEFczP2ft-csvdsl"
+#define CURRENT_COMPONENT_ID "csvdsl-0.1.0.0-t9SI7nPtzNKp7pGCPHXI1-csvdsl"
 #endif /* CURRENT_COMPONENT_ID */
 #ifndef CURRENT_PACKAGE_VERSION
 #define CURRENT_PACKAGE_VERSION "0.1.0.0"

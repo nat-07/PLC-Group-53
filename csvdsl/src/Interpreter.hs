@@ -165,18 +165,30 @@ interpret (DOWHERE task cond filename) = do
     let rows = lines contents
         rowData = map (splitOn ",") rows
     filtered <- filterRows cond rowData
-    writeFile file (sortCsv (intercalate "\n" filtered))
-    return $ intercalate "\n" filtered
+    let cleanedLines = filter (not . null) (filtered)
+        cleaned = intercalate "\n" cleanedLines
+        finalOutput = sortCsv cleaned
+        finalOutput' = if not (null finalOutput) && last finalOutput == '\n'
+                       then init finalOutput
+                       else finalOutput
+    writeFile file finalOutput'
+    return finalOutput'
 
 -- Conditions for Select statements --
 interpret (SELECTWHERE selectExpr cond filename) = do
     file <- interpret filename
-    contents <- interpret selectExpr
+    contents <- interpret selectExpr    
     let rows = lines contents
         rowData = map (splitOn ",") rows
     filtered <- filterRows cond rowData
-    writeFile file (sortCsv (intercalate "\n" filtered))
-    return $ intercalate "\n" filtered
+    let cleanedLines = filter (not . null) filtered
+        cleaned = intercalate "\n" cleanedLines
+    let finalOutput = sortCsv cleaned
+    let finalOutput' = if not (null finalOutput) && last finalOutput == '\n'
+                       then init finalOutput
+                       else finalOutput
+    writeFile file finalOutput'
+    return finalOutput'
 
 interpret expr = return $ "Unimplemented: " ++ show expr
 evaluateCondition :: Exp2 -> Row -> Bool
@@ -287,7 +299,7 @@ getKey :: [String] -> Int -> String
 getKey row i = if i < length row then row !! i else ""
 
 fillEmpty :: String -> String -> String
-fillEmpty p q = if null p then q else p
+fillEmpty p q = if null p || p == " " then q else p
 
 copyString :: [String] -> String -> [String]
 copyString [] _ = []
@@ -359,4 +371,4 @@ sortCsv contents =
     let rows = lines contents
         cleaned = map trimRowFields rows
         sorted = sort cleaned
-    in unlines sorted
+    in dropWhileEnd (== '\n') (unlines sorted)
